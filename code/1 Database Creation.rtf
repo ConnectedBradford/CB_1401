@@ -1,0 +1,33 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 CREATE TABLE CY_MYSPACE_HR.patient_conditions AS\
+select p.person_id, gender_concept_id, (2021 - p.year_of_birth ) as Age,\
+death_datetime , ethnicity_concept_id , location_id , p.provider_id , care_site_id , gender_source_value ,\
+race_source_value ,\
+ethnicity_source_value , condition_occurrence_id , condition_concept_id , condition_start_date ,\
+condition_end_date ,\
+visit_occurrence_id ,\
+condition_start_datetime , condition_end_datetime , condition_type_concept_id , condition_status_concept_id ,\
+visit_detail_id , condition_source_value , condition_source_concept_id ,\
+condition_status_source_value from `CY_CDM_V1_50k_Random.person` p LEFT OUTER JOIN CY_CDM_V1_50k_Random.condition_occurrence co\
+ON p.person_id = co.person_id;\
+\
+\
+CREATE TABLE CY_MYSPACE_HR.all_diseases As\
+select * from CY_CDM_V1_50k_Random.concept_ancestor where ancestor_concept_id = 4274025;\
+\
+\
+CREATE TABLE CY_MYSPACE_HR.patient_diseases AS\
+select *\
+from CY_MYSPACE_HR.all_diseases d INNER JOIN CY_MYSPACE_HR.patient_conditions pc\
+ON d.descendant_concept_id = pc.condition_concept_id;\
+\
+\
+CREATE TABLE CY_MYSPACE_HR.patient_disease_names AS\
+select *\
+from CY_MYSPACE_HR.patient_diseases pd LEFT JOIN CY_CDM_V1_50k_Random.concept c ON pd.condition_concept_id = c.concept_id;}

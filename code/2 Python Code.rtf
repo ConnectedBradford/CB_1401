@@ -1,0 +1,341 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import pandas as pd\
+%load_ext google.cloud.bigquery\
+from pandas.io import gbq\
+data="""SELECT * FROM `yhcr-prd-phm-bia-core.CY_MYSPACE_HR.patient_disease_names `""" data=gbq.read_gbq(data,project_id="yhcr-prd-phm-bia-core") data1['person_id'].nunique()\
+\
+\
+data1 = data1.loc[((data1['Age'] > 10) & (data1['Age'] < 100)) & ((data1[' race_source_value'] == '(XaJR3) Pakistani or British Pakistani - ethnic ca') | ( data1['race_source_value'] == '(XaJQv) British or mixed British - ethnic category ') | (data1['race_source_value'] == '(9S7 ..) Pakistani') | (data1[' race_source_value'] == '(9S1..) White - ethnic group') | (data1['race_source_value '] == '(XaFwD) White British') | (data1[' race_source_value'] == 'White British - ethnic category 2001 census') | (data1[' race_source_value'] == 'White : British, mixed British') | (data1[' race_source_value'] == '(XaJRC) English - ethnic category 2001 census') )]\
+data1\
+\
+current=data1.iloc[:,[4,29]]\
+current.columns = ["person_id", "concept_name"]\
+index = pd.unique(current["concept_name"]).tolist()\
+import numpy as np\
+new = pd.DataFrame(columns=["person_id"]+ pd.unique(current["concept_name"]).tolist())\
+for person_index , person in current.groupby("person_id"):\
+    person = person.join(pd.get_dummies(person["concept_name"])) person = person.drop("concept_name", axis=1)\
+    person = pd.DataFrame(person.max()).T\
+    new = new.append(person, ignore_index=True)\
+    if person_index % 500 == 0:\
+        new.replace(np.nan, 0).to_csv("Matrix.csv")\
+new.replace(np.nan, 0).to_csv("Matrix.csv")\
+\
+\
+Info=data1.iloc[:,[4,6,13,12]]\
+\
+\
+df2 = data.filter(regex='type 2 diabetes')\
+\
+\
+df3=df2.iloc[:, 1] | df2.iloc[:, 2] | df2.iloc[:, 3] | df2.iloc[:, 4] | df2.iloc[:, 5] | df2.iloc[:, 6] | df2.iloc[:, 7] | df2 .iloc[:, 8] | df2.iloc[:, 10] | df2.iloc[:\
+, 11] | df2.iloc[:, 12]\
+df2.insert(13, 'Target', df3)\
+df2.drop(df2.iloc[:, 0:13], inplace = True, axis = 1)\
+df2\
+data.insert(12047, 'Target', df2)\
+data\
+data = data[data.columns.drop(list(data.filter(regex='type 2 diabetes')))]\
+data\
+\
+\
+Diabetic=data.loc[data['Target'] == 1]\
+Diabetic=Diabetic.drop(['Target'], axis=1)\
+Diabetic\
+Non_Diabetic=data.loc[data['Target'] == 0] Non_Diabetic=Non_Diabetic.drop(['Target'], axis=1)\
+Non_Diabetic\
+Diabetic.to_csv(r'T2D_Comorbids_Matrix.csv', encoding='utf-8') Non_Diabetic.to_csv(r'NONT2D_Comorbids_Matrix.csv', encoding='utf-8')\
+df = pd.read_csv("T2D_Comorbids_Matrix.csv").drop("Unnamed: 0", axis=1).set_index("person_id")\
+non_diabetic_df = pd.read_csv("NONT2D_Comorbids_Matrix.csv").drop("Unnamed: 0", axis=1).set_index("person_id")\
+\
+\
+full_demo_df = pd.read_excel("T2D_Comorbids_ other info.xlsx").drop_duplicates(). set_index("person_id")\
+df["Target"] = 1\
+non_diabetic_df["Target"] = 0\
+excess = [i for i in non_diabetic_df.columns if i not in df.columns]\
+for col in excess: df[col] = 0\
+full_df = pd.concat([non_diabetic_df , df])\
+full_df = full_df.drop([i for i in full_df.columns if "diabetes" in i.lower()], axis =1)\
+full_df = full_df.replace(np.nan, 0).astype(int)\
+full_demo_df = full_demo_df.replace(np.nan, "Not specified - JDB")\
+full_df = full_df[\uc0\u32 \u771 full_df.index.duplicated(keep='first')]\
+full_demo_df = full_demo_df[\uc0\u32 \u771 full_demo_df.index.duplicated(keep='first')]\
+overlap_index = [i for i in full_demo_df.index if i in full_df.index]\
+full_demo_df = full_demo_df.loc[overlap_index]\
+full_demo_df= full_demo_df.sort_index()\
+full_df = full_df.sort_index()\
+for col in full_demo_df: full_df[col] = full_demo_df[col]\
+full_df = full_df.drop([i for i in full_df.columns if "unnamed" in i.lower()], axis= 1)\
+\
+\
+from django.shortcuts import render from django.conf import settings from django.http import HttpResponse from .analysis import *\
+import pandas as pd\
+import json\
+from .forms import UploadForm\
+from .models import Upload\
+full_df = pd.read_csv(f"\{settings.STATICFILES_DIRS[0]\}/data/full_t2d_data.csv").set_index("person_id")\
+full_df = full_df.loc[\uc0\u32 \u771 full_df.index.duplicated(keep='first')]\
+full_df["race_source_value"] = full_df["race_source_value"].apply(lambda x: x. replace("\\t", ""))\
+demographic_df = full_df[["race_source_value", "Age", "gender_source_value"]] demographic_df_for_prediction = pd.concat([demographic_df.drop("race_source_value",axis=1), pd.get_dummies(demographic_df["race_source_value"])], axis=1) demographic_df_for_prediction["gender_source_value"] = demographic_df_for_prediction["gender_source_value"].replace("M", 0). replace("F", 1).replace("N", 0.5).replace( "I", 0.5)\
+full_df = full_df.drop("race_source_value", axis=1).drop("Age", axis=1).drop(" gender_source_value", axis=1)\
+full_df = full_df.replace(np.nan, 0) # Demographic Data\
+# Split Features and Target\
+targets = full_df["Target"]\
+features = full_df.drop("Target", axis=1)\
+\
+def get_age_group_view(request):\
+    demographic_age_group_data = get_age_group_data(full_df.drop("Target", axis=1),demographic_df)\
+    return HttpResponse(json.dumps(\{"demographic_age_group_data": demographic_age_group_data\}),content_type="application/json")\
+\
+def get_summary_table(request):\
+    summary_table_data = get_data_summary(features, demographic_df, targets) return HttpResponse(json.dumps(\{"table": summary_table_data\}), content_type="application/json")\
+\
+def get_symptoms_distribution_view(request):\
+    symptom_distribution_x , symptom_distribution_y = get_symptoms_distribution(\
+    return HttpResponse( json.dumps(\{"symptom_distribution_x":content_type="application/json" )\
+\
+def get_age_distribution_view(request):\
+    age_histogram_x , age_histogram_y = get_age_distribution(demographic_df)\
+    return HttpResponse(json.dumps(\{"age_histogram_x": age_histogram_x , "age_histogram_y": age_histogram_y\}), content_type="application/json")\
+\
+def get_variance_per_dimension_count(features):\
+    start_dimensions = min(features.shape[0], features.shape[1])\
+    dimensions = reduce_dimension_to_list(start_dimensions)\
+    #Dictionary to store variance per dimensional reduction\
+    dimension_variance = \{\}\
+    # iterate over all dimensions\
+    for dimension in dimensions:\
+        pca = PCA(dimension)\
+        pca.fit(features.values)\
+        dimension_variance[dimension] = np.sum(pca.explained_variance_ratio_)\
+    variance_per_dimention = pd.DataFrame(dimension_variance.values(), dimension_variance.keys()).reset_index()\
+    return variance_per_dimention.values.tolist()\
+\
+def get_2d_dimesion_scatter(features, targets): pca = PCA(2)\
+    two_dimensions = pca.fit_transform(features.values)\
+    return_arrays = []\
+    for target in targets:\
+        return_arrays.append(pd.DataFrame(two_dimensions).merge(targets.reset_index()[target], how="left", left_index=True, right_index=True) .values.tolist())\
+    return return_arrays\
+\
+def get_age_distribution(demographics):\
+    age_histogram_y , age_histogram_x = np.histogram(demographics["Age"], 20)\
+    age_histogram_x = list(age_histogram_x.astype(int))\
+    age_histogram_labels = [f"0 - \{age_histogram_x[0]\}"]\
+    for index in range(1, len(age_histogram_x)):\
+        if index == len(age_histogram_x) - 1:\
+            age_histogram_labels.append(f"\{age_histogram_x[index]\}+")\
+        else:\
+            age_histogram_labels.append(f"\{age_histogram_x[index - 1]\} - \{age_histogram_x[index]\}")\
+    return age_histogram_labels , list(age_histogram_y.astype(int).astype(str))\
+\
+def get_symptoms_distribution(feature_counts):\
+    symptom_distribution_y , symptom_distribution_x = np.histogram(feature_counts[1]. values, 200)\
+    symptom_distribution_x = symptom_distribution_x.astype(int)[ symptom_distribution_x < 500]\
+    symptom_distribution_y = symptom_distribution_y[:symptom_distribution_x.shape[0] ]\
+    symptom_histogram_labels = []\
+    for index in range(1, len(symptom_distribution_x)):\
+        if index == len(symptom_distribution_x) - 1:\
+            symptom_histogram_labels.append(f"\{symptom_distribution_x[index]\}+")\
+        else:\
+            symptom_histogram_labels.append(f"\{symptom_distribution_x[index - 1]\} - \{symptom_distribution_x[index] \}")\
+    symptom_histogram_labels = [str(i) for i in symptom_histogram_labels]\
+    symptom_distribution_y = [str(i) for i in symptom_distribution_y]\
+    return symptom_histogram_labels , symptom_distribution_y\
+\
+def get_data_summary(features, demographics, targets):\
+    total_patients = str(features.shape[0])\
+    total_features = str(features.shape[1])\
+    average_age = str(round(demographics["Age"].mean(), 2))\
+    largest_racial_group = str(demographics["race_source_value"].value_counts().sort_values(ascending=False).index[0].split(") ")[-1])\
+    male_amount = str(demographics["gender_source_value"].value_counts()["M"])\
+    female_amount = str(demographics["gender_source_value"].value_counts()["F"]) unkown_amount = 0\
+    if "N" in pd.unique(demographics["gender_source_value"]):\
+        unkown_amount = str(demographics["gender_source_value"].value_counts()["N"])\
+    demograpic_colors = list(demographics["race_source_value"].value_counts().iloc[: 20].index)\
+    total_diabetic = str(np.where(targets==1)[0].shape[0])\
+    return [total_patients , total_features , average_age , largest_racial_group , male_amount , female_amount , unkown_amount , demograpic_colors , total_diabetic]\
+\
+\
+\
+\
+reduced_features = get_reduced_features(features, targets) omitted_features = [i for i in features if i not in reduced_features]\
+features_with_demographics = pd.concat([reduced_features , demographic_df_for_prediction], axis=1)\
+feature_counts = features.apply(lambda ser: ser.value_counts()).T feature_counts = feature_counts.replace(np.nan, 0)\
+forests = []\
+unique_races = list(pd.unique(demographic_df["race_source_value"]))\
+\
+def get_reduced_feature_table(request):\
+    reduced_feature_data = get_feature_reduction_summary(features, reduced_features, targets, omitted_features)\
+    return HttpResponse(json.dumps(\{"reduced_feature_data": reduced_feature_data\}), content_type="application/json")\
+def get_omitted_kept_features_data(request):\
+    omitted_feature_chart_data = get_omitted_kept_features_chart_data(features,reduced_features)\
+    random_omitted_features = list(features[[i for i in features if i not in reduced_features]].sample(15).columns)\
+    return HttpResponse( json.dumps(\{"omitted_feature_chart_data": omitted_feature_chart_data , " random_omitted_features": random_omitted_features\}), content_type="application/json" )\
+    \
+#Function to get a even distribution of dimensions from the total dimensions to 2\
+def reduce_dimension_to_list(start):\
+    dimensions = [start]\
+    while dimensions[-1] > 2:\
+        if dimensions[-1] < 50: dimensions.append(int(dimensions[-1]*0.3))\
+        else: dimensions.append(int(dimensions[-1]*0.75))\
+    dimensions[-1] = 2\
+    return dimensions\
+\
+#Uses Randoom forest feature importance to get the top important features\
+def get_reduced_features(features, targets):\
+    forest = RandomForestClassifier().fit(features, targets)\
+    importances = pd.Series(forest.feature_importances_ , features.columns) reduced = importances[importances > importances.mean()]\
+    return features[reduced.index]\
+\
+def get_variance_per_dimension_count(features):\
+    start_dimensions = min(features.shape[0], features.shape[1])\
+    dimensions = reduce_dimension_to_list(start_dimensions)\
+    #Dictionary to store variance per dimensional reduction\
+    dimension_variance = \{\}\
+    # iterate over all dimensions\
+    for dimension in dimensions:\
+        pca = PCA(dimension)\
+        pca.fit(features.values)\
+        dimension_variance[dimension] = np.sum(pca.explained_variance_ratio_)\
+    variance_per_dimention = pd.DataFrame(dimension_variance.values(), dimension_variance.keys()).reset_index()\
+    return variance_per_dimention.values.tolist()\
+\
+def get_feature_reduction_summary(features, reduced_features, targets, omitted_features):\
+    features_before = features.shape[1]\
+    features_after = reduced_features.shape[1]\
+    features_removed = features_before - features_after\
+    return [features_before , features_after , features_removed]\
+\
+def get_omitted_kept_features_chart_data(features, reduced_features):\
+    pca = PCA(2).fit_transform(features.T)\
+    df = pd.DataFrame(pca, columns=["x", "y"])\
+    labels = []\
+    for i in features.columns:\
+        if i in reduced_features.columns:\
+            labels.append("Kept")\
+        else:\
+            labels.append("Omitted")\
+    df["labels"] = labels\
+    df = df[df["x"] < 20]\
+    df = df[df["y"] < 20]\
+    omitted_feature_chart_data = []\
+    omitted_feature_chart_data.append(["Omitted", df[df["labels"] == "Omitted"].values.astype(str).tolist()])\
+    omitted_feature_chart_data.append(["Kept", df[df["labels"] == "Kept"].values.astype(str).tolist()])\
+    return omitted_feature_chart_data\
+    \
+\
+\
+\
+def get_correlation_bar_data(request):\
+    top20_correlated_features = get_feature_correlation_chart_data(reduced_features ,targets, demographic_df)\
+    return HttpResponse(json.dumps(\{"top20_correlated_features": top20_correlated_features\}), content_type="application/json")\
+    \
+def get_feature_correlation_chart_data(reduced_features, targets, demographic_data):\
+    correlations = reduced_features.corrwith(targets)\
+    correlations = correlations.reindex(correlations.abs().sort_values(ascending=False).index)\
+    top20_correlations = correlations.iloc[:20]\
+    top20 = reduced_features[targets == 1][top20_correlations.index]\
+    for index in top20.index:\
+        top20.loc[index] = top20.loc[index].replace(1, demographic_data.loc[index, "Age"])\
+    average_ages = top20.mean()\
+    top20 = reduced_features[targets == 1][top20_correlations.index]\
+    for index in top20.index:\
+        top20.loc[index] = top20.loc[index].replace(1, demographic_data.loc[index, "gender_source_value"])\
+    top20 = top20.apply(lambda ser: ser.value_counts()).T\
+    if "N" in top20.columns:\
+        top20 = top20.drop("N", axis=1)\
+    top20["Average Age"] = average_ages.round(2)\
+    top20["Correlations"] = top20_correlations.round(2).values\
+    top20 = top20.reset_index()[["index", "M", "F", "Average Age", "Correlations"]].astype(str).values.tolist()\
+    return top20\
+    \
+\
+\
+\
+def get_age_group_data(features, demographics):\
+    demographics["bin"] = pd.cut(demographics["Age"], [0, 30, 40, 50, 60, 70, 80, 90, 120])\
+    demographic_age_group_data = []\
+    for age_group, age_df in demographics.groupby("bin"):\
+        if age_df.shape[0] != 0:\
+            top5_symptoms = (features.loc[age_df.index].apply(lambda ser: ser.value_counts()).T[1]. sort_values(ascending=False) / age_df.shape[0] * 100).round( 2).iloc[:5].reset_index(). values.tolist()\
+            top5_ethnic = age_df["race_source_value"].value_counts().iloc[:5].reset_index().values.tolist() \
+            demographic_age_group_data.append([f"Age \{age_group.left\} - \{age_group.right\}", top5_ethnic, top5_symptoms])\
+    print("finished demographics")\
+    \
+def get_age_group_view(request):\
+    demographic_age_group_data = get_age_group_data(full_df.drop("Target", axis=1), demographic_df)\
+return HttpResponse(json.dumps(\{"demographic_age_group_data": demographic_age_group_data\}),content_type="application/json")\
+\
+\
+\
+\
+\
+def get_clustering_view(request): \
+    top_5_symptoms_per_class , pca_scatter_chart_data_t2d , pca_scatter_chart_data_nt2d = get_clustering_data(features, feature_counts , targets)\
+    return HttpResponse( json.dumps(\{"top_5_symptoms_per_class": top_5_symptoms_per_class , "pca_scatter_chart_data_t2d":pca_scatter_chart_data_t2d , "pca_scatter_chart_data_nt2d":pca_scatter_chart_data_nt2d\}), content_type="application/json" )\
+\
+def get_clustering_data(features, feature_counts, targets):\
+    kmeans_features = KMeans(n_clusters=4, random_state=0).fit(features.T)\
+    labels = kmeans_features.labels_ + 1 top_5_symptoms_per_class = []\
+    for i in pd.unique(labels):\
+        top_5_symptoms_per_class.append([str(i), list(feature_counts[labels == i][1].sort_values(ascending=False).astype(str).iloc[:5].index)] )\
+    # print(features)\
+    # print(targets == 1)\
+    # print(features[targets == 1])\
+    #Diabetic\
+    diabetic = features[targets == 1]\
+    non_diabetic = features[targets == 0]\
+    kmeans_plot = KMeans(n_clusters=4, random_state=0).fit(diabetic)\
+    pca = PCA(2).fit_transform(diabetic)\
+    df = pd.DataFrame(pca, columns=["x", "y"]) df["labels"] = kmeans_plot.labels_ + 1\
+    pca_scatter_chart_data_t2d = []\
+    for index, (label, label_df) in enumerate(df.groupby("labels")):\
+        top_5_symptoms_per_class[index].append(label_df.shape[0])\
+        pca_scatter_chart_data_t2d.append([str(label), label_df.astype(str).values.tolist()])\
+    kmeans_plot = KMeans(n_clusters=4, random_state=0).fit(non_diabetic)\
+    pca = PCA(2).fit_transform(non_diabetic)\
+    df = pd.DataFrame(pca, columns=["x", "y"]) df["labels"] = kmeans_plot.labels_ + 1\
+    pca_scatter_chart_data_nt2d = []\
+    for index, (label, label_df) in enumerate(df.groupby("labels")):\
+        top_5_symptoms_per_class[index].append(label_df.shape[0])\
+        pca_scatter_chart_data_nt2d.append([str(label), label_df.astype(str).values.tolist()])\
+    return top_5_symptoms_per_class , pca_scatter_chart_data_t2d , pca_scatter_chart_data_nt2d\
+\
+\
+\
+\
+\
+def get_model_metrics(reduced_features , targets):\
+    models = \{"Logistic Regression": LogisticRegression , "Random Forest": RandomForestClassifier , "Decsion Tree": DecisionTreeClassifier , "Linear SVM": SVC, "KNN": KNeighborsClassifier\}\
+    x_train, x_test, y_train, y_test = train_test_split(reduced_features, targets)\
+    models_names = [] accuracies = []\
+    #Check for best model with accuracy\
+    best_model = None\
+    best_accuracy = 0\
+    for model_name, model in models.items(): \
+        loaded = model().fit(x_train, y_train)\
+        predictions = loaded.predict(x_test)\
+        accuracy = accuracy_score(y_test, predictions)\
+        recall = recall_score(y_test, predictions)\
+        precision = precision_score(y_test, predictions)\
+        if model_name == "Random Forest": \
+            best_accuracy = accuracy \
+            best_model = loaded\
+        models_names.append(model_name)\
+        accuracies.append([str(round(accuracy, 2)), str(round(recall, 2)), str(round(precision, 2))])\
+    accuracies = np.array(accuracies).T.tolist()\
+    top15 = list(pd.Series(best_model.feature_importances_ , reduced_features.columns ).sort_values(ascending=False).index[:30])\
+    return models_names , accuracies , best_model , top15\
+\
+def get_model_evaluation(request):\
+    model_names, model_metrics, forest, top15 = get_model_metrics(features_with_demographics , targets)\
+    forests.append(forest)\
+    return HttpResponse( json.dumps(\{"model_names": model_names , "model_metrics": model_metrics , " top15": top15\}), content_type=" application/json")\
+}
